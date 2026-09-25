@@ -3,9 +3,9 @@
 > Interactive browser suite for high-performance biomolecular and materials simulations with drag-and-drop workspace ingestion, 3D structure inspection, dual-engine protocol translation, and real-time physics integration.
 
 <p align="center">
-<a href="https://ibb.co/350FF3vR">
-<img src="https://i.ibb.co/JWzpp1q3/github-project-banner-1790357373350.jpg" alt="github-project-banner-1790357373350">
-</a>
+  <a href="https://ibb.co/C5kTMYVH">
+    <img src="https://i.ibb.co/C5kTMYVH/asas.png" alt="asas">
+  </a>
 </p>
 
 ## Features
