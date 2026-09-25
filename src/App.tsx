@@ -16,6 +16,8 @@ import { InteractiveSimulation } from './components/InteractiveSimulation';
 import { AnalysisDashboard } from './components/AnalysisDashboard';
 import { DiagnosticAssistant } from './components/DiagnosticAssistant';
 import { ScriptExportModal } from './components/ScriptExportModal';
+import { GitHubShowcaseModal } from './components/GitHubShowcaseModal';
+import githubBanner from './assets/images/github_project_banner_1790357373350.jpg';
 import { Activity, ArrowLeftRight, Box, Download, FileText, FlaskConical, Layers, Scale, ShieldCheck, Zap } from 'lucide-react';
 
 export default function App() {
@@ -28,6 +30,7 @@ export default function App() {
   const [activeEngine, setActiveEngine] = useState<'gromacs' | 'lammps' | 'comparative'>('gromacs');
   const [currentXvg, setCurrentXvg] = useState<XvgSeries | null>(sampleXvg.rmsd);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
 
   // File manifest
   const [files, setFiles] = useState<GromacsFile[]>([
@@ -172,6 +175,7 @@ export default function App() {
         currentView={currentView}
         onSelectView={setCurrentView}
         onOpenExport={() => setIsExportOpen(true)}
+        onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
         systemName={structure?.name || 'Empty System'}
         activeEngine={activeEngine}
         onSelectEngine={handleSelectEngine}
@@ -496,6 +500,13 @@ export default function App() {
         structure={structure}
         protocol={protocol}
         lammpsProtocol={lammpsProtocol}
+      />
+
+      {/* GitHub Project Showcase & Banner Modal */}
+      <GitHubShowcaseModal
+        isOpen={isGitHubModalOpen}
+        onClose={() => setIsGitHubModalOpen(false)}
+        imageSrc={githubBanner}
       />
     </div>
   );

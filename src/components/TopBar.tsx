@@ -1,5 +1,4 @@
-import React from 'react';
-import { Download, FlaskConical } from 'lucide-react';
+import { Download, FlaskConical, Github } from 'lucide-react';
 
 export type NavView = 'workspace' | 'structure' | 'protocol' | 'comparative' | 'simulation' | 'analytics' | 'diagnostics';
 
@@ -7,6 +6,7 @@ interface TopBarProps {
   currentView: NavView;
   onSelectView: (view: NavView) => void;
   onOpenExport: () => void;
+  onOpenGitHubModal: () => void;
   systemName: string;
   activeEngine: 'gromacs' | 'lammps' | 'comparative';
   onSelectEngine: (engine: 'gromacs' | 'lammps') => void;
@@ -16,6 +16,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   currentView,
   onSelectView,
   onOpenExport,
+  onOpenGitHubModal,
   systemName,
   activeEngine,
   onSelectEngine,
@@ -64,7 +65,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       </nav>
 
       {/* Zone 3: 1-2 primary actions */}
-      <div className="flex items-center gap-3 font-mono">
+      <div className="flex items-center gap-2.5 font-mono">
         {/* Engine switcher quick toggle */}
         <div className="hidden sm:flex items-center p-0.5 bg-slate-900 border border-slate-800 rounded-lg text-[11px]">
           <button
@@ -90,8 +91,17 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
 
         <button
+          onClick={onOpenGitHubModal}
+          title="GitHub Project Picture & Social Banner"
+          className="p-1.5 text-slate-300 hover:text-white bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-mono"
+        >
+          <Github className="w-3.5 h-3.5 text-slate-400" />
+          <span className="hidden xl:inline">GitHub Banner</span>
+        </button>
+
+        <button
           onClick={onOpenExport}
-          className="px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 shadow-sm"
+          className="px-3 py-1.5 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 shadow-sm"
         >
           <Download className="w-3.5 h-3.5" />
           <span>Export Package</span>
