@@ -1,172 +1,83 @@
 # GROMACS vs. LAMMPS Comparative Studio
 
-> A modern interactive platform for comparing, understanding, visualizing, and translating Molecular Dynamics workflows between GROMACS and LAMMPS.
-
 <p align="center">
-  <a href="https://ibb.co/350FF3vR">
-    <img src="https://i.ibb.co/JWzpp1q3/github-project-banner-1790357373350.jpg" alt="GROMACS vs LAMMPS Comparative Studio">
+  <a href="https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio">
+    <img src="assets/banner.jpg" alt="GROMACS vs LAMMPS Comparative Studio Banner" width="100%">
   </a>
 </p>
 
 <p align="center">
-  <strong>Compare • Visualize • Translate • Learn</strong>
+  <strong>An interactive platform for comparing, visualizing, analyzing, and cross-translating Molecular Dynamics (MD) workflows.</strong>
 </p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio/stargazers"><img src="https://img.shields.io/github/stars/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio?style=flat&color=yellow" alt="GitHub Stars"></a>
+  <a href="https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio/issues"><img src="https://img.shields.io/github/issues/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio?color=red" alt="GitHub Issues"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen" alt="Node Version"></a>
+</p>
+
+---
+
+## 📌 Table of Contents
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Engine Comparison](#-engine-comparison)
+- [Workflow Architecture](#-workflow-architecture)
+- [Application Preview](#-application-preview)
+- [Supported File Formats](#-supported-file-formats)
+- [Getting Started](#-getting-started)
+- [Project Directory Structure](#-project-directory-structure)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [Support & Donations](#-support--donations)
+- [License](#-license)
 
 ---
 
 ## 📖 Overview
 
-**GROMACS vs. LAMMPS Comparative Studio** is an interactive web-based environment designed to help researchers, students, and computational scientists explore the similarities, differences, strengths, and workflows of the two most widely used Molecular Dynamics (MD) simulation packages:
-
-- **GROMACS** for biomolecular simulations
-- **LAMMPS** for materials science and atomistic modeling
-
-Through side-by-side comparisons, 3D visualization, workflow translation, and integrated analysis tools, users can quickly understand how simulation protocols differ across both ecosystems.
+**GROMACS vs. LAMMPS Comparative Studio** bridges the divide between biomolecular modeling and materials science simulations. By offering side-by-side engine comparisons, real-time 3D structure visualization, protocol translation, and integrated analysis metrics, this platform enables researchers, educators, and computational chemists to seamlessly transition between **GROMACS** and **LAMMPS** ecosystems.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-### 🔄 Side-by-Side Engine Comparison
-
-- Compare GROMACS and LAMMPS simulation workflows
-- Understand equivalent commands and settings
-- Explore engine-specific capabilities
-- Study best practices for each simulation package
-
-### 📂 Drag-and-Drop File Import
-
-Supported formats:
-
-```text
-.pdb
-.gro
-.top
-.itp
-.mdp
-.xvg
-.data
-.dump
-.in
-.log.lammps
-.zip
-```
-
-### 🧬 Interactive Molecular Visualization
-
-- Ribbon structures
-- Ball-and-stick models
-- Space-filling representations
-- Periodic simulation boxes
-- Atomic distance measurements
-- Structural inspection tools
-
-### ⚙️ Protocol Translation Studio
-
-Convert simulation concepts between:
-
-```text
-GROMACS → LAMMPS
-
-LAMMPS → GROMACS
-```
-
-Features:
-
-- Parameter mapping
-- Unit conversion
-- Command explanation
-- Workflow recommendations
-
-### 📊 Analysis Dashboard
-
-Visualize simulation data with:
-
-- RMSD
-- RMSF
-- Radius of Gyration (Rg)
-- Temperature profiles
-- Pressure profiles
-- Energy curves
-- Structural statistics
-
-### 🎓 Educational Environment
-
-Ideal for:
-
-- Computational Biology
-- Molecular Modeling
-- Biophysics
-- Computational Chemistry
-- Materials Science
-- Nanotechnology
-- Graduate Education
+| Module | Capability & Description |
+| :--- | :--- |
+| **🔄 Engine Comparison** | Interactive side-by-side comparison of simulation parameters, boundary conditions, and execution syntax. |
+| **⚙️ Protocol Translator** | Smart conversion suite mapping inputs, force field flags, and units between `GROMACS ↔ LAMMPS`. |
+| **🧬 3D Visualization** | High-performance WebGL viewer supporting Ribbon, Ball-and-Stick, Space-Filling, and PBC box rendering. |
+| **📊 Scientific Dashboard** | Dynamic plotting tools for trajectory evaluation (RMSD, RMSF, Radius of Gyration, Energy, Temperature/Pressure profiles). |
+| **📂 Unified File Import** | Instant drag-and-drop parser for native GROMACS topologies/trajectories and LAMMPS data/dump files. |
 
 ---
 
-## 🆚 GROMACS vs. LAMMPS
+## 🆚 Engine Comparison
 
-| Feature | GROMACS | LAMMPS |
-|----------|----------|----------|
-| Primary Focus | Biomolecular Systems | Materials & Atomistic Systems |
-| Proteins | ✅ Excellent | ⚠️ Possible |
-| DNA / RNA | ✅ Excellent | ⚠️ Possible |
-| Membranes | ✅ Excellent | ⚠️ Possible |
-| Metals | ⚠️ Limited | ✅ Excellent |
-| Alloys | ⚠️ Limited | ✅ Excellent |
-| Polymers | ⚠️ Moderate | ✅ Excellent |
-| Graphene | ⚠️ Moderate | ✅ Excellent |
-| Reactive Force Fields | ❌ Limited | ✅ Excellent |
-| Ease of Use | ✅ High | ⚠️ Moderate |
-| Flexibility | ⚠️ Moderate | ✅ Very High |
+| Feature / Domain | GROMACS | LAMMPS |
+| :--- | :---: | :---: |
+| **Primary Domain Focus** | Biomolecular Systems | Materials Science & Soft Matter |
+| **Proteins & Nucleic Acids** | 🟢 Native / High | 🟡 Moderate / Script-based |
+| **Membranes & Lipids** | 🟢 Native / High | 🟡 Moderate / Script-based |
+| **Metals, Alloys & Crystals** | 🔴 Limited | 🟢 Native / High |
+| **Polymers & Graphene** | 🟡 Moderate | 🟢 Native / High |
+| **Reactive Force Fields (ReaxFF)** | 🔴 Not Supported | 🟢 Native / High |
+| **Syntax Complexity** | Declarative (`.mdp` files) | Scripting / Command-driven |
+| **System Modification Flexibility** | Moderate | Extremely High |
 
 ---
 
-## 🔬 Typical Workflow Comparison
+## 🔬 Workflow Architecture
 
-### GROMACS Workflow
-
+### GROMACS Pipeline
 ```text
-PDB Structure
-      │
-      ▼
-   pdb2gmx
-      │
-      ▼
-   editconf
-      │
-      ▼
-    solvate
-      │
-      ▼
-    grompp
-      │
-      ▼
-    mdrun
-      │
-      ▼
-   Analysis
+[PDB Structure] ➔ [pdb2gmx] ➔ [editconf] ➔ [solvate] ➔ [grompp] ➔ [mdrun] ➔ [Analysis]
 ```
 
-### LAMMPS Workflow
-
+### LAMMPS Pipeline
 ```text
-Structure/Data File
-         │
-         ▼
-    Input Script
-         │
-         ▼
-  Force Field Setup
-         │
-         ▼
- Simulation Commands
-         │
-         ▼
-       run
-         │
-         ▼
-      Analysis
+[Structure / Data File] ➔ [Input Script Setup] ➔ [Force Field Assignment] ➔ [Fixes & Execution] ➔ [run] ➔ [Analysis]
 ```
 
 ---
@@ -174,91 +85,70 @@ Structure/Data File
 ## 🖼 Application Preview
 
 <p align="center">
-  <a href="https://ibb.co/C5kTMYVH">
-    <img src="https://i.ibb.co/C5kTMYVH/asas.png" alt="Application Screenshot">
+  <a href="assets/preview.png">
+    <img src="assets/preview.png" alt="Application Screenshot" width="85%">
   </a>
 </p>
 
 ---
 
-## 🎯 Use Cases
+## 📂 Supported File Formats
 
-### Computational Biology
+The suite natively parses and visualizes the following file extensions:
 
-- Protein simulations
-- Enzyme systems
-- Antibody modeling
-- Membrane simulations
-- Nucleic acid studies
-
-### Materials Science
-
-- Metal alloys
-- Crystalline materials
-- Graphene structures
-- Nanotubes
-- Polymers
-
-### Education
-
-- Teaching molecular dynamics
-- Comparing simulation engines
-- Understanding workflow differences
-- Learning MD best practices
+- **GROMACS Formats:** `.gro`, `.top`, `.itp`, `.mdp`, `.xvg`, `.pdb`
+- **LAMMPS Formats:** `.data`, `.dump`, `.in`, `.log.lammps`
+- **Compressed Archives:** `.zip` (containing batch simulation packages)
 
 ---
 
-## 🚀 Installation
+## 🚀 Getting Started
 
-Clone the repository:
+### Prerequisites
 
-```bash
-git clone https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio.git
-```
+Ensure you have [Node.js](https://nodejs.org/) (v18.0 or higher) and `npm` installed.
 
-Enter the project directory:
+### Installation
 
-```bash
-cd GROMACS-vs.-LAMMPS-Comparative-Studio
-```
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio.git](https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio.git)
+   cd GROMACS-vs.-LAMMPS-Comparative-Studio
+   ```
 
-Install dependencies:
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-```bash
-npm install
-```
+3. **Launch the development environment:**
+   ```bash
+   npm run dev
+   ```
 
-Start the development server:
-
-```bash
-npm run dev
-```
-
-Build production assets:
-
-```bash
-npm run build
-```
+4. **Build for production deployment:**
+   ```bash
+   npm run build
+   ```
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Directory Structure
 
 ```text
 GROMACS-vs.-LAMMPS-Comparative-Studio/
-│
-├── public/
+├── public/                 # Static public assets
+├── assets/                 # Repository documentation assets (banners, screenshots)
 ├── src/
-│   ├── components/
-│   ├── viewer/
-│   ├── translator/
-│   ├── comparison/
-│   ├── analysis/
-│   ├── utilities/
-│   └── assets/
-│
-├── examples/
-├── docs/
+│   ├── components/         # Shared UI components
+│   ├── viewer/             # 3D Molecule rendering engines (WebGL / Three.js / NGL)
+│   ├── translator/         # Logic for GROMACS <-> LAMMPS translation
+│   ├── comparison/         # Engine comparison parameters & matrices
+│   ├── analysis/           # Charting & numerical data analysis scripts
+│   ├── utilities/          # Parsers and formatting utilities
+│   └── assets/             # Application design & icon assets
+├── examples/               # Sample input topologies & data files
+├── docs/                   # Additional documentation
 ├── package.json
 ├── vite.config.js
 └── README.md
@@ -268,69 +158,62 @@ GROMACS-vs.-LAMMPS-Comparative-Studio/
 
 ## 🛣 Roadmap
 
-- [x] Comparative workflow browser
-- [x] Molecular visualization
-- [x] Protocol translation tools
-- [x] Scientific plotting
-- [ ] Interactive trajectory playback
-- [ ] Advanced benchmark comparisons
-- [ ] AI-assisted protocol recommendations
-- [ ] Force-field comparison database
-- [ ] Interactive tutorials
-- [ ] Educational learning modules
+- [x] **Comparative Workflow Engine** — Interactive feature-by-feature comparisons.
+- [x] **3D Molecular Renderer** — High-speed structural visualization.
+- [x] **Protocol Translation Studio** — Automated directive mapping between engines.
+- [x] **Scientific Data Plotting** — Integrated dashboard for `.xvg` and `.log` charts.
+- [ ] **Interactive Trajectory Playback** — Support for multi-frame trajectory files.
+- [ ] **AI-Assisted Parameter Advisor** — Machine Learning-backed recommendations for force-field mappings.
+- [ ] **Benchmark Suite** — Performance analysis across hardware architectures (CPU vs. GPU).
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome.
+Contributions are welcome from the computational chemistry, materials science, and software engineering communities!
 
-1. Fork the repository
-2. Create a feature branch
+1. **Fork** the project.
+2. Create your Feature Branch:
+   ```bash
+   git checkout -b feature/AmazingFeature
+   ```
+3. **Commit** your changes:
+   ```bash
+   git commit -m "Add some AmazingFeature"
+   ```
+4. **Push** to the branch:
+   ```bash
+   git push origin feature/AmazingFeature
+   ```
+5. Open a **Pull Request**.
 
-```bash
-git checkout -b feature/my-feature
+---
+
+## 💖 Support & Donations
+
+If this tool has accelerated your research, simplified your teaching, or streamlined your workflows, consider supporting the ongoing development!
+
+### Decentralized Crypto Transfer
+
+You can send crypto directly via **TRC-20 (TRON Network)**:
+
+```text
+TPoSnHr516phFiSrFWi2CrZvmQ5GpZTTvM
 ```
 
-3. Commit your changes
+> **Network:** TRON (TRC-20)  
+> **Supported Tokens:** USDT, TRX, USDC
 
-```bash
-git commit -m "Add new feature"
-```
-
-4. Push your branch
-
-```bash
-git push origin feature/my-feature
-```
-
-5. Open a Pull Request
+*Your contributions help maintain cloud deployment, fund feature development, and support open-source computational science.*
 
 ---
 
 ## 📄 License
 
-Released under the MIT License.
-
-See the `LICENSE` file for details.
-
----
-
-## ⭐ Support
-
-If you find this project useful:
-
-- Star the repository
-- Share it with colleagues
-- Report bugs
-- Suggest new features
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
 
 ---
 
 <p align="center">
   <strong>Bridging Biomolecular and Materials Simulation Workflows</strong>
-</p>
-
-<p align="center">
-  GROMACS • LAMMPS • Molecular Dynamics • Computational Science
 </p>
