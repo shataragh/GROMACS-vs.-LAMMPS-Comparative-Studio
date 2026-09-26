@@ -10,6 +10,15 @@ const AMINO_ACID_CHARGES: Record<string, number> = {
   // Terminal residues typically add +1 (N-term) and -1 (C-term)
 };
 
+const STANDARD_AMINO_ACIDS = new Set([
+  'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'HSE', 'HSD', 'HSP',
+  'ILE', 'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL', 'SEC', 'PYL'
+]);
+
+const SOLVENT_AND_IONS = new Set([
+  'HOH', 'WAT', 'TIP3', 'SOL', 'NA', 'CL', 'K', 'MG', 'ZN', 'CA', 'FE', 'MN', 'IOD', 'BR'
+]);
+
 export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeStructure {
   const lines = content.split('\n');
   const atoms: Atom[] = [];
@@ -19,9 +28,32 @@ export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeSt
   let boxX = 0;
   let boxY = 0;
   let boxZ = 0;
+  let dockingScore: number | undefined;
+  let cavityInfo: MoleculeStructure['cavityInfo'] | undefined;
 
   for (const line of lines) {
-    if (line.startsWith('CRYST1')) {
+    if (line.startsWith('REMARK')) {
+      // Check for CB-Dock / AutoDock Vina remarks
+      // e.g., REMARK VINA RESULT:    -8.4      0.000      0.000
+      // e.g., REMARK  Binding Energy = -8.5 kcal/mol
+      // e.g., REMARK Cavity 1: Center( 12.4, 25.1, -8.3 ) Volume: 420 A^3
+      if (line.includes('VINA RESULT')) {
+        const match = line.match(/VINA RESULT:\s+([-\d.]+)/);
+        if (match) dockingScore = parseFloat(match[1]);
+      } else if (line.includes('Binding Energy') || line.includes('Score')) {
+        const match = line.match(/([-\d.]+)\s*(?:kcal\/mol)?/);
+        if (match) dockingScore = parseFloat(match[1]);
+      } else if (line.includes('Cavity') && line.includes('Center')) {
+        const centerMatch = line.match(/Center\s*\(\s*([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)\s*\)/i);
+        const volMatch = line.match(/Volume:\s*([\d.]+)/i);
+        if (centerMatch) {
+          cavityInfo = {
+            center: [parseFloat(centerMatch[1]), parseFloat(centerMatch[2]), parseFloat(centerMatch[3])],
+            volume: volMatch ? parseFloat(volMatch[1]) : undefined,
+          };
+        }
+      }
+    } else if (line.startsWith('CRYST1')) {
       const a = parseFloat(line.substring(6, 15).trim());
       const b = parseFloat(line.substring(15, 24).trim());
       const c = parseFloat(line.substring(24, 33).trim());
@@ -31,6 +63,7 @@ export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeSt
         boxZ = c;
       }
     } else if (line.startsWith('ATOM  ') || line.startsWith('HETATM')) {
+      const isHetatm = line.startsWith('HETATM');
       const id = parseInt(line.substring(6, 11).trim(), 10) || atoms.length + 1;
       const name = line.substring(12, 16).trim();
       const resName = line.substring(17, 20).trim();
@@ -52,11 +85,13 @@ export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeSt
         else if (cleanName.startsWith('FE')) element = 'FE';
         else if (cleanName.startsWith('MG')) element = 'MG';
         else if (cleanName.startsWith('ZN')) element = 'ZN';
+        else if (cleanName.startsWith('BR')) element = 'BR';
       }
 
       if (isNaN(x) || isNaN(y) || isNaN(z)) continue;
 
       const isBackbone = ['N', 'CA', 'C', 'O'].includes(name);
+      const isLigand = !STANDARD_AMINO_ACIDS.has(resName) && !SOLVENT_AND_IONS.has(resName);
 
       const atom: Atom = {
         id,
@@ -71,6 +106,7 @@ export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeSt
         tempFactor,
         element: element || 'C',
         isBackbone,
+        isLigand,
       };
 
       atoms.push(atom);
@@ -83,6 +119,7 @@ export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeSt
           name: resName,
           chain: chainID,
           atoms: [],
+          isLigand,
         });
       }
       residueMap.get(resKey)!.atoms.push(atom);
@@ -93,6 +130,63 @@ export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeSt
 
   // Assign approximate secondary structures based on CA distances / geometry
   assignSecondaryStructure(residues);
+
+  // Ligand identification and binding cavity detection
+  const ligandResidues = residues.filter(r => r.isLigand && r.atoms.length >= 3);
+  const hasLigand = ligandResidues.length > 0;
+  
+  let ligands: MoleculeStructure['ligands'] | undefined;
+  let bindingPocketResidues: MoleculeStructure['bindingPocketResidues'] | undefined;
+
+  if (hasLigand) {
+    ligands = ligandResidues.map(lig => {
+      let cx = 0, cy = 0, cz = 0;
+      for (const a of lig.atoms) {
+        cx += a.x;
+        cy += a.y;
+        cz += a.z;
+      }
+      cx /= lig.atoms.length;
+      cy /= lig.atoms.length;
+      cz /= lig.atoms.length;
+
+      return {
+        resName: lig.name,
+        resSeq: lig.seq,
+        atomCount: lig.atoms.length,
+        atoms: lig.atoms,
+        center: [Math.round(cx * 10) / 10, Math.round(cy * 10) / 10, Math.round(cz * 10) / 10],
+      };
+    });
+
+    // Find all protein residues within 4.5 Angstroms of any ligand heavy atom
+    const allLigandAtoms = ligandResidues.flatMap(r => r.atoms).filter(a => a.element !== 'H');
+    const pocketMap = new Map<number, { resName: string; resSeq: number; minDistance: number }>();
+
+    for (const res of residues) {
+      if (res.isLigand || SOLVENT_AND_IONS.has(res.name)) continue;
+
+      let minDistance = Infinity;
+      for (const pAtom of res.atoms) {
+        if (pAtom.element === 'H') continue;
+        for (const lAtom of allLigandAtoms) {
+          const d = Math.hypot(pAtom.x - lAtom.x, pAtom.y - lAtom.y, pAtom.z - lAtom.z);
+          if (d < minDistance) minDistance = d;
+        }
+      }
+
+      // 4.5 Angstrom contact threshold for binding pocket interaction
+      if (minDistance <= 4.5) {
+        pocketMap.set(res.seq, {
+          resName: res.name,
+          resSeq: res.seq,
+          minDistance: Math.round(minDistance * 100) / 100,
+        });
+      }
+    }
+
+    bindingPocketResidues = Array.from(pocketMap.values()).sort((a, b) => a.minDistance - b.minDistance);
+  }
 
   // Calculate system bounding box if CRYST1 was absent
   if (boxX === 0 && atoms.length > 0) {
@@ -141,7 +235,39 @@ export function parsePDB(content: string, filename = 'molecule.pdb'): MoleculeSt
     numAtoms: atoms.length,
     numResidues: residues.length,
     massApprox,
+    hasLigand,
+    ligands,
+    bindingPocketResidues,
+    dockingScore,
+    cavityInfo,
   };
+}
+
+export function extractReceptorPdb(structure: MoleculeStructure): string {
+  const receptorAtoms = structure.atoms.filter(a => !a.isLigand);
+  let pdb = `REMARK Extracted Receptor from ${structure.name}\n`;
+  for (const a of receptorAtoms) {
+    const atomName = a.name.length < 4 ? ` ${a.name.padEnd(3, ' ')}` : a.name.substring(0, 4);
+    const resName = a.resName.padEnd(3, ' ').substring(0, 3);
+    const line = `ATOM  ${String(a.id).padStart(5, ' ')} ${atomName} ${resName} ${a.chainID}${String(a.resSeq).padStart(4, ' ')}    ${a.x.toFixed(3).padStart(8, ' ')}${a.y.toFixed(3).padStart(8, ' ')}${a.z.toFixed(3).padStart(8, ' ')}  1.00  0.00          ${a.element.padStart(2, ' ')}\n`;
+    pdb += line;
+  }
+  pdb += 'TER\nEND\n';
+  return pdb;
+}
+
+export function extractLigandPdb(structure: MoleculeStructure): string {
+  const ligandAtoms = structure.atoms.filter(a => a.isLigand);
+  if (ligandAtoms.length === 0) return '';
+  let pdb = `REMARK Extracted Docked Ligand from ${structure.name}\n`;
+  for (const a of ligandAtoms) {
+    const atomName = a.name.length < 4 ? ` ${a.name.padEnd(3, ' ')}` : a.name.substring(0, 4);
+    const resName = a.resName.padEnd(3, ' ').substring(0, 3);
+    const line = `HETATM${String(a.id).padStart(5, ' ')} ${atomName} ${resName} ${a.chainID}${String(a.resSeq).padStart(4, ' ')}    ${a.x.toFixed(3).padStart(8, ' ')}${a.y.toFixed(3).padStart(8, ' ')}${a.z.toFixed(3).padStart(8, ' ')}  1.00  0.00          ${a.element.padStart(2, ' ')}\n`;
+    pdb += line;
+  }
+  pdb += 'END\n';
+  return pdb;
 }
 
 export function parseGRO(content: string, filename = 'molecule.gro'): MoleculeStructure {
@@ -289,3 +415,39 @@ function assignSecondaryStructure(residues: Residue[]): void {
     res.secondaryStructure = 'coil';
   }
 }
+
+export function exportStructureToPdb(mol: MoleculeStructure): string {
+  if (mol.rawPdbText) return mol.rawPdbText;
+
+  const lines: string[] = [];
+  lines.push(`HEADER    ${mol.name.slice(0, 40).padEnd(40, ' ')}`);
+  lines.push(`TITLE     ${mol.name}`);
+  if (mol.box) {
+    lines.push(
+      `CRYST1${mol.box.x.toFixed(3).padStart(9, ' ')}${mol.box.y.toFixed(3).padStart(9, ' ')}${mol.box.z.toFixed(3).padStart(9, ' ')}  90.00  90.00  90.00 P 1           1`
+    );
+  }
+
+  for (let i = 0; i < mol.atoms.length; i++) {
+    const a = mol.atoms[i];
+    const recType = a.isLigand ? 'HETATM' : 'ATOM  ';
+    const atomNum = (i + 1).toString().padStart(5, ' ');
+    const atomName = a.name.length < 4 ? ` ${a.name.padEnd(3, ' ')}` : a.name.slice(0, 4);
+    const resName = a.resName.padEnd(3, ' ').slice(0, 3);
+    const chain = (a.chainID || 'A').slice(0, 1);
+    const resSeq = (a.resSeq || 1).toString().padStart(4, ' ');
+    const x = a.x.toFixed(3).padStart(8, ' ');
+    const y = a.y.toFixed(3).padStart(8, ' ');
+    const z = a.z.toFixed(3).padStart(8, ' ');
+    const occ = (a.occupancy ?? 1.0).toFixed(2).padStart(6, ' ');
+    const temp = (a.tempFactor ?? 20.0).toFixed(2).padStart(6, ' ');
+    const elem = (a.element || a.name.slice(0, 1)).padStart(2, ' ');
+
+    lines.push(
+      `${recType}${atomNum} ${atomName} ${resName} ${chain}${resSeq}    ${x}${y}${z}${occ}${temp}          ${elem}`
+    );
+  }
+  lines.push('END');
+  return lines.join('\n');
+}
+

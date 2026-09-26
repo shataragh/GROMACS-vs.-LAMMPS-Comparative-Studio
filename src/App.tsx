@@ -14,11 +14,14 @@ import { ProtocolBuilder } from './components/ProtocolBuilder';
 import { ComparativeView } from './components/ComparativeView';
 import { InteractiveSimulation } from './components/InteractiveSimulation';
 import { AnalysisDashboard } from './components/AnalysisDashboard';
+import { CBDockToMDStudio } from './components/CBDockToMDStudio';
 import { DiagnosticAssistant } from './components/DiagnosticAssistant';
 import { ScriptExportModal } from './components/ScriptExportModal';
 import { GitHubShowcaseModal } from './components/GitHubShowcaseModal';
+import { PdbFetchModal } from './components/PdbFetchModal';
+import { SeparatedSystemResult } from './utils/structureSeparation';
 import githubBanner from './assets/images/github_project_banner_1790357373350.jpg';
-import { Activity, ArrowLeftRight, Box, Download, FileText, FlaskConical, Layers, Scale, ShieldCheck, Zap } from 'lucide-react';
+import { Activity, ArrowLeftRight, Box, Database, Download, FileText, FlaskConical, Layers, Scale, ShieldCheck, Sparkles, Zap } from 'lucide-react';
 
 export default function App() {
   // Initial default system is 1AKI Lysozyme
@@ -31,6 +34,7 @@ export default function App() {
   const [currentXvg, setCurrentXvg] = useState<XvgSeries | null>(sampleXvg.rmsd);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+  const [isPdbModalOpen, setIsPdbModalOpen] = useState(false);
 
   // File manifest
   const [files, setFiles] = useState<GromacsFile[]>([
@@ -157,10 +161,112 @@ export default function App() {
     setProtocol((prev) => ({
       ...prev,
       systemName: newMol.name,
+      isProteinLigand: !!newMol.hasLigand,
+      ligandName: newMol.ligands?.[0]?.resName || 'LIG',
     }));
     setLammpsProtocol((prev) => ({
       ...prev,
       systemName: `${newMol.name} (LAMMPS)`,
+    }));
+  };
+
+  const handleLoadPdb = (pdbStructure: MoleculeStructure, pdbText: string) => {
+    setStructure(pdbStructure);
+
+    const cleanName = `${pdbStructure.pdbId || 'structure'}.pdb`;
+    const pdbFile: GromacsFile = {
+      name: cleanName,
+      size: pdbText.length,
+      type: 'structure',
+      engine: 'gromacs',
+      content: pdbText,
+      lastModified: Date.now(),
+      parsedSummary: `RCSB PDB ${pdbStructure.pdbId} · ${pdbStructure.numAtoms} atoms · ${pdbStructure.numResidues} residues`,
+    };
+
+    setFiles((prev) => [
+      ...prev.filter((f) => f.name !== cleanName),
+      pdbFile,
+    ]);
+
+    setProtocol((prev) => ({
+      ...prev,
+      systemName: pdbStructure.pdbMetadata?.title || `${pdbStructure.pdbId || 'PDB'} Structure`,
+      isProteinLigand: !!pdbStructure.hasLigand,
+      ligandName: pdbStructure.ligands?.[0]?.resName || 'LIG',
+    }));
+
+    setLammpsProtocol((prev) => ({
+      ...prev,
+      systemName: `${pdbStructure.pdbId || 'PDB'} Structure (LAMMPS)`,
+    }));
+  };
+
+  const handleLoadSeparatedSystem = (result: SeparatedSystemResult) => {
+    // Set the isolated clean favorable complex as the active 3D visualization & simulation structure
+    setStructure(result.complexStructure);
+
+    const newFiles: GromacsFile[] = [];
+
+    // 1. Primary isolated complex
+    newFiles.push({
+      name: result.complexFilename,
+      size: result.complexPdbText.length,
+      type: 'structure',
+      engine: 'gromacs',
+      content: result.complexPdbText,
+      lastModified: Date.now(),
+      parsedSummary: `Separated Complex · Chain ${result.activeChainID}${result.activeLigandName ? ` + ${result.activeLigandName}` : ''} · ${result.stats.totalAtoms} atoms`,
+    });
+
+    // 2. Extracted Receptor PDB (Apo-protein)
+    if (result.stats.proteinAtoms > 0) {
+      newFiles.push({
+        name: result.receptorFilename,
+        size: result.receptorPdbText.length,
+        type: 'structure',
+        engine: 'gromacs',
+        content: result.receptorPdbText,
+        lastModified: Date.now(),
+        parsedSummary: `Receptor Chain ${result.activeChainID} · ${result.stats.proteinAtoms} atoms · ${result.stats.residueCount} residues`,
+      });
+    }
+
+    // 3. Extracted Ligand PDB (if present)
+    if (result.stats.ligandAtoms > 0 && result.activeLigandName) {
+      newFiles.push({
+        name: result.ligandFilename,
+        size: result.ligandPdbText.length,
+        type: 'parameter',
+        engine: 'universal',
+        content: result.ligandPdbText,
+        lastModified: Date.now(),
+        parsedSummary: `Extracted Ligand ${result.activeLigandName} · ${result.stats.ligandAtoms} atoms · GAFF / CGenFF target`,
+      });
+    }
+
+    // Update files manifest
+    setFiles((prev) => [
+      ...prev.filter(
+        (f) =>
+          f.name !== result.complexFilename &&
+          f.name !== result.receptorFilename &&
+          f.name !== result.ligandFilename
+      ),
+      ...newFiles,
+    ]);
+
+    // Update protocols with isolated chain & ligand
+    setProtocol((prev) => ({
+      ...prev,
+      systemName: result.complexStructure.name,
+      isProteinLigand: result.stats.ligandAtoms > 0,
+      ligandName: result.activeLigandName || 'LIG',
+    }));
+
+    setLammpsProtocol((prev) => ({
+      ...prev,
+      systemName: `${result.complexStructure.name} (LAMMPS)`,
     }));
   };
 
@@ -176,6 +282,7 @@ export default function App() {
         onSelectView={setCurrentView}
         onOpenExport={() => setIsExportOpen(true)}
         onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
+        onOpenPdbModal={() => setIsPdbModalOpen(true)}
         systemName={structure?.name || 'Empty System'}
         activeEngine={activeEngine}
         onSelectEngine={handleSelectEngine}
@@ -229,6 +336,26 @@ export default function App() {
                       {structure.box ? `${(structure.box.x/10).toFixed(1)} × ${(structure.box.y/10).toFixed(1)} × ${(structure.box.z/10).toFixed(1)} nm` : 'Not Defined'}
                     </span>
                   </div>
+
+                  {structure.dockingScore !== undefined && (
+                    <>
+                      <div className="w-px h-6 bg-slate-800" />
+                      <div>
+                        <span className="text-emerald-500 block text-[10px] uppercase font-bold">CB-Dock Score</span>
+                        <span className="text-emerald-400 font-bold tabular-nums text-sm">
+                          {structure.dockingScore} kcal/mol
+                        </span>
+                      </div>
+                      <div className="w-px h-6 bg-slate-800" />
+                      <button
+                        onClick={() => setCurrentView('cbdock')}
+                        className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>CB-Dock → MD Studio</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -240,6 +367,7 @@ export default function App() {
               onFilesUpdated={setFiles}
               files={files}
               onSelectEngine={handleSelectEngine}
+              onOpenPdbModal={() => setIsPdbModalOpen(true)}
             />
 
             {/* Quick Structure Preview & Protocol Summary Grid */}
@@ -254,7 +382,11 @@ export default function App() {
                     Open Full Viewport →
                   </button>
                 </div>
-                <MolecularViewer structure={structure} height="420px" />
+                <MolecularViewer
+                  structure={structure}
+                  height="420px"
+                  onOpenPdbModal={() => setIsPdbModalOpen(true)}
+                />
               </div>
 
               <div className="lg:col-span-5 space-y-4">
@@ -338,6 +470,29 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* CB-Dock to MD Bridge Card */}
+                <div className="p-4 rounded-xl border border-emerald-800/60 bg-emerald-950/20 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 font-bold">
+                      <Sparkles className="w-4 h-4" />
+                      <span className="uppercase">CB-Dock → MD Bridge</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-mono">
+                      Docking Workflow
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Transition from CB-Dock cavity docking to all-atom MD: automate small-molecule ligand parameterization (GAFF2/CGenFF), position restraints, and binding stability analysis.
+                  </p>
+                  <button
+                    onClick={() => setCurrentView('cbdock')}
+                    className="text-xs font-mono text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Launch CB-Dock → MD Studio</span>
+                    <span>→</span>
+                  </button>
+                </div>
+
                 {/* Pedagogical Feature Card */}
                 <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/30 space-y-2.5">
                   <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
@@ -359,6 +514,18 @@ export default function App() {
           </div>
         )}
 
+        {/* CB-Dock to MD Studio View */}
+        {currentView === 'cbdock' && (
+          <CBDockToMDStudio
+            structure={structure}
+            protocol={protocol}
+            onUpdateProtocol={setProtocol}
+            onLoadStructure={handleStructureLoaded}
+            onOpenExport={() => setIsExportOpen(true)}
+            onOpenPdbModal={() => setIsPdbModalOpen(true)}
+          />
+        )}
+
         {/* 3D Structure View */}
         {currentView === 'structure' && (
           <div className="space-y-4">
@@ -378,7 +545,11 @@ export default function App() {
               </button>
             </div>
 
-            <MolecularViewer structure={structure} height="650px" />
+            <MolecularViewer
+              structure={structure}
+              height="650px"
+              onOpenPdbModal={() => setIsPdbModalOpen(true)}
+            />
           </div>
         )}
 
@@ -507,6 +678,16 @@ export default function App() {
         isOpen={isGitHubModalOpen}
         onClose={() => setIsGitHubModalOpen(false)}
         imageSrc={githubBanner}
+      />
+
+      {/* Protein Data Bank (RCSB PDB) Direct Fetch & Chain Separation Modal */}
+      <PdbFetchModal
+        isOpen={isPdbModalOpen}
+        onClose={() => setIsPdbModalOpen(false)}
+        onLoadPdb={handleLoadPdb}
+        onLoadSeparatedSystem={handleLoadSeparatedSystem}
+        currentPdbId={structure?.pdbId}
+        initialStructure={structure}
       />
     </div>
   );

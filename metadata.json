@@ -2,5 +2,7 @@
   "name": "GMX Studio - Molecular Dynamics & GROMACS Suite",
   "description": "Interactive molecular dynamics studio with drag-and-drop file ingestion, 3D structure & trajectory viewer, GROMACS pipeline generator, real-time physics simulation, and energy analytics.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

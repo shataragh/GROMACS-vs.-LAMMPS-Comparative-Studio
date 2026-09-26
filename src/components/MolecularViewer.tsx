@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Atom, MoleculeStructure } from '../types/gromacs';
-import { Camera, Eye, HelpCircle, Layers, Maximize2, Move, RotateCcw, Ruler } from 'lucide-react';
+import { MolstarViewer } from './MolstarViewer';
+import { Camera, Eye, HelpCircle, Layers, Maximize2, Move, RotateCcw, Ruler, Sparkles, Zap, Database } from 'lucide-react';
 
 interface MolecularViewerProps {
   structure: MoleculeStructure | null;
   height?: string;
   onSelectAtom?: (atom: Atom | null) => void;
+  onOpenPdbModal?: () => void;
+  defaultEngine?: 'molstar' | 'three';
 }
 
 type Representation = 'ribbon' | 'ball_stick' | 'spacefill' | 'wireframe';
@@ -42,7 +45,11 @@ export const MolecularViewer: React.FC<MolecularViewerProps> = ({
   structure,
   height = '520px',
   onSelectAtom,
+  onOpenPdbModal,
+  defaultEngine = 'molstar',
 }) => {
+  const [viewerEngine, setViewerEngine] = useState<'molstar' | 'three'>(defaultEngine);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -459,6 +466,18 @@ export const MolecularViewer: React.FC<MolecularViewerProps> = ({
     }
   };
 
+  if (viewerEngine === 'molstar') {
+    return (
+      <MolstarViewer
+        structure={structure}
+        height={height}
+        onOpenPdbModal={onOpenPdbModal}
+        onTogglePhysicsViewer={() => setViewerEngine('three')}
+        showEngineToggle={true}
+      />
+    );
+  }
+
   return (
     <div className="relative w-full rounded-xl overflow-hidden border border-slate-800 bg-[#07090E] select-none">
       {/* Top 3D Control Ribbon */}
@@ -495,6 +514,26 @@ export const MolecularViewer: React.FC<MolecularViewerProps> = ({
 
         {/* Right: Tools & Actions */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-lg pointer-events-auto">
+          {/* Switch back to Mol* */}
+          <button
+            onClick={() => setViewerEngine('molstar')}
+            title="Switch back to Mol* 3D Viewer"
+            className="px-2 py-1 text-xs font-mono rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition-colors flex items-center gap-1 font-semibold"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Mol* Engine</span>
+          </button>
+
+          {onOpenPdbModal && (
+            <button
+              onClick={onOpenPdbModal}
+              title="Fetch structure directly from Protein Data Bank"
+              className="p-1.5 text-cyan-400 hover:text-cyan-300 rounded transition-colors"
+            >
+              <Database className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             onClick={() => setShowBox(!showBox)}
             title="Toggle Periodic Simulation Box"

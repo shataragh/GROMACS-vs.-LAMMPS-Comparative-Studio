@@ -12,6 +12,7 @@ export interface Atom {
   element: string;
   charge?: number;
   isBackbone?: boolean;
+  isLigand?: boolean;
 }
 
 export interface Residue {
@@ -22,6 +23,7 @@ export interface Residue {
   secondaryStructure?: 'helix' | 'sheet' | 'coil';
   phi?: number;
   psi?: number;
+  isLigand?: boolean;
 }
 
 export interface MoleculeStructure {
@@ -43,6 +45,47 @@ export interface MoleculeStructure {
   numAtoms: number;
   numResidues: number;
   massApprox: number; // kDa
+  hasLigand?: boolean;
+  ligands?: {
+    resName: string;
+    resSeq: number;
+    atomCount: number;
+    atoms: Atom[];
+    center: [number, number, number];
+  }[];
+  bindingPocketResidues?: {
+    resName: string;
+    resSeq: number;
+    minDistance: number; // in Angstroms
+  }[];
+  dockingScore?: number; // Vina binding energy in kcal/mol
+  cavityInfo?: {
+    id?: number;
+    center: [number, number, number];
+    size?: [number, number, number];
+    volume?: number;
+  };
+  pdbId?: string;
+  rawPdbText?: string;
+  pdbMetadata?: {
+    title?: string;
+    resolution?: number;
+    experimentalMethod?: string;
+    depositionDate?: string;
+    releaseDate?: string;
+    organism?: string;
+    pubmedId?: string;
+    doi?: string;
+    polymerCount?: number;
+    ligands?: string[];
+  };
+  separationInfo?: {
+    favorableChainID: string;
+    favorableLigandResName: string | null;
+    summaryRecommendation: string;
+    chainsCount: number;
+    ligandsCount: number;
+  };
 }
 
 export type ForceField = 'amber99sb-ildn' | 'charmm36m' | 'oplsaa' | 'gromos54a7';
@@ -104,6 +147,23 @@ export interface SimulationProtocol {
   pmeCutoff: number; // nm
   pullCodeEnabled: boolean;
   gpuAcceleration: boolean;
+  isProteinLigand?: boolean;
+  ligandName?: string;
+  ligandParamTool?: 'gaff_antechamber' | 'cgenff' | 'swissparam' | 'openff';
+  restrainLigandInEquilibration?: boolean;
+  ligandCharge?: number;
+}
+
+export interface CBDockDetails {
+  receptorName: string;
+  ligandName: string;
+  vinaScore: number;
+  cavityId: number;
+  cavityCenter: [number, number, number];
+  cavityVolume: number;
+  pocketResidues: { resName: string; resSeq: number; minDistance: number }[];
+  hbondCount: number;
+  paramMethod: 'gaff_antechamber' | 'cgenff' | 'swissparam' | 'openff';
 }
 
 export interface XvgSeries {

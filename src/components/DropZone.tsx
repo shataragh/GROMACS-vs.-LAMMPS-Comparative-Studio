@@ -5,7 +5,8 @@ import { parseGromacsLog, parseXVG } from '../utils/xvgParser';
 import { parseLammpsData, parseLammpsLog } from '../utils/lammpsGenerator';
 import { GromacsFile, MoleculeStructure, XvgSeries } from '../types/gromacs';
 import { getSampleMolecule, generateSampleXvgData } from '../utils/sampleData';
-import { AlertCircle, CheckCircle2, ChevronRight, FileCode, FileText, FlaskConical, FolderArchive, Layers, Scale, Sparkles, Terminal, UploadCloud } from 'lucide-react';
+import { fetchPdbFromRcsb } from '../utils/rcsbPdb';
+import { AlertCircle, ArrowRight, CheckCircle2, ChevronRight, Database, FileCode, FileText, FlaskConical, FolderArchive, Layers, Loader2, Scale, Search, Sparkles, Split, Terminal, UploadCloud } from 'lucide-react';
 
 interface DropZoneProps {
   onLoadStructure: (mol: MoleculeStructure) => void;
@@ -13,6 +14,7 @@ interface DropZoneProps {
   onFilesUpdated: (files: GromacsFile[]) => void;
   files: GromacsFile[];
   onSelectEngine?: (engine: 'gromacs' | 'lammps') => void;
+  onOpenPdbModal?: () => void;
 }
 
 export const DropZone: React.FC<DropZoneProps> = ({
@@ -21,11 +23,14 @@ export const DropZone: React.FC<DropZoneProps> = ({
   onFilesUpdated,
   files,
   onSelectEngine,
+  onOpenPdbModal,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileFilter, setFileFilter] = useState<'all' | 'gromacs' | 'lammps'>('all');
+  const [directPdbInput, setDirectPdbInput] = useState('');
+  const [isPdbLoading, setIsPdbLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = async (file: File): Promise<GromacsFile | null> => {
@@ -244,7 +249,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
     handleFiles(e.dataTransfer.files);
   };
 
-  const loadPreset = (preset: 'lysozyme' | 'ubiquitin' | 'alanine' | 'graphene' | 'copper' | 'analytics') => {
+  const loadPreset = (preset: 'lysozyme' | 'ubiquitin' | 'alanine' | 'graphene' | 'copper' | 'analytics' | 'cbdock_complex' | 'cbdock_mpro') => {
     if (preset === 'analytics') {
       const sample = generateSampleXvgData();
       onLoadXvg(sample.rmsd);
@@ -256,6 +261,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
     onLoadStructure(mol);
 
     const isLmp = preset === 'graphene' || preset === 'copper';
+    const isDock = preset === 'cbdock_complex' || preset === 'cbdock_mpro';
+
     const syntheticFile: GromacsFile = {
       name: mol.filename,
       size: 45000,
@@ -263,11 +270,46 @@ export const DropZone: React.FC<DropZoneProps> = ({
       engine: isLmp ? 'lammps' : 'gromacs',
       content: '',
       lastModified: Date.now(),
-      parsedSummary: `${mol.numAtoms} atoms · ${isLmp ? 'LAMMPS Structure' : `${mol.numResidues} residues`}`,
+      parsedSummary: isDock
+        ? `CB-Dock Complex · ${mol.numAtoms} atoms · Vina Score: ${mol.dockingScore ? `${mol.dockingScore} kcal/mol` : '-8.6 kcal/mol'}`
+        : `${mol.numAtoms} atoms · ${isLmp ? 'LAMMPS Structure' : `${mol.numResidues} residues`}`,
     };
 
     onFilesUpdated([...files.filter(f => f.name !== mol.filename), syntheticFile]);
     setStatusMessage(`Loaded benchmark model: ${mol.name}`);
+  };
+
+  const handleDirectPdbFetch = async (targetIdOrName?: string) => {
+    const rawInput = (targetIdOrName || directPdbInput).trim();
+    if (!rawInput) return;
+
+    setIsPdbLoading(true);
+    setStatusMessage(`Searching & fetching structure "${rawInput}" from Protein Data Bank (RCSB)...`);
+
+    try {
+      const { structure, pdbText, metadata, separationAnalysis } = await fetchPdbFromRcsb(rawInput);
+      onLoadStructure(structure);
+
+      const targetId = structure.pdbId || rawInput.toUpperCase();
+      const pdbFile: GromacsFile = {
+        name: `${targetId}.pdb`,
+        size: pdbText.length,
+        type: 'structure',
+        engine: 'gromacs',
+        content: pdbText,
+        lastModified: Date.now(),
+        parsedSummary: `RCSB PDB ${targetId} · Favorable Chain: ${separationAnalysis.favorableChainID} · ${structure.numAtoms} atoms · ${structure.numResidues} residues${metadata.resolution ? ` · ${metadata.resolution} Å` : ''}`,
+      };
+
+      onFilesUpdated([...files.filter(f => f.name !== `${targetId}.pdb`), pdbFile]);
+      setStatusMessage(`Imported ${targetId}: ${metadata.title || structure.name} (Favorable Chain: ${separationAnalysis.favorableChainID}) into Mol* 3D Viewer`);
+      setDirectPdbInput('');
+    } catch (err: any) {
+      console.error('Direct PDB fetch error', err);
+      setStatusMessage(`Error fetching "${rawInput}": ${err?.message || 'Check PDB code or name'}`);
+    } finally {
+      setIsPdbLoading(false);
+    }
   };
 
   const filteredFiles = files.filter(f => {
@@ -278,6 +320,121 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Direct RCSB Protein Data Bank Fetch Card */}
+      <div className="p-4 rounded-xl border border-cyan-800/60 bg-gradient-to-r from-cyan-950/40 via-slate-900/60 to-slate-900/40 space-y-3 font-mono">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+              <Database className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-xs font-bold text-white uppercase tracking-wider">
+              Fetch from Protein Data Bank (RCSB PDB)
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              Direct Live Stream
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {onOpenPdbModal && (
+              <>
+                <button
+                  onClick={onOpenPdbModal}
+                  className="text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1 font-semibold"
+                >
+                  <Split className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Separate Chains</span>
+                </button>
+                <button
+                  onClick={onOpenPdbModal}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
+                >
+                  <Search className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Search by ID / Name</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Input Form & Instant Quick Pills */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={directPdbInput}
+              onChange={(e) => setDirectPdbInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleDirectPdbFetch();
+                }
+              }}
+              placeholder="Enter PDB ID (e.g. 6LU7, 1AKI) or protein name (e.g. Protease, Lysozyme, Spike RBD)..."
+              className="w-full px-3.5 py-2 bg-slate-950/80 border border-slate-700/80 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 font-mono"
+              disabled={isPdbLoading}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleDirectPdbFetch()}
+              disabled={isPdbLoading || !directPdbInput.trim()}
+              className="px-4 py-2 bg-cyan-400 hover:bg-cyan-300 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 shrink-0"
+            >
+              {isPdbLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Fetching...</span>
+                </>
+              ) : (
+                <>
+                  <Database className="w-3.5 h-3.5" />
+                  <span>Fetch to Mol*</span>
+                </>
+              )}
+            </button>
+
+            {onOpenPdbModal && (
+              <button
+                onClick={onOpenPdbModal}
+                disabled={isPdbLoading}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 hover:border-cyan-500/50 font-semibold rounded-lg text-xs transition-colors flex items-center gap-1.5 shrink-0"
+                title="Separate favorable chain and ligand"
+              >
+                <Split className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Separate Chains</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Popular 1-Click PDB Targets */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+          <span className="text-slate-400">Popular Targets:</span>
+          {[
+            { id: '6LU7', label: '6LU7 (Mpro + N3)', desc: 'Antiviral target' },
+            { id: '1AKI', label: '1AKI (Lysozyme)', desc: 'Benchmark protein' },
+            { id: '1UBQ', label: '1UBQ (Ubiquitin)', desc: 'Regulatory' },
+            { id: '6M0J', label: '6M0J (Spike RBD)', desc: 'ACE2 complex' },
+            { id: '4DFR', label: '4DFR (DHFR)', desc: 'Methotrexate drug target' },
+            { id: '1MBN', label: '1MBN (Myoglobin)', desc: 'Heme enzyme' },
+            { id: '3PBL', label: '3PBL (Dopamine D3)', desc: 'GPCR membrane' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleDirectPdbFetch(item.id)}
+              disabled={isPdbLoading}
+              title={item.desc}
+              className="px-2 py-0.5 rounded bg-slate-900/80 hover:bg-cyan-950 border border-slate-700 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 transition-colors flex items-center gap-1"
+            >
+              <span className="text-cyan-400 font-bold">{item.id}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Drag & Drop Target Box */}
       <div
         onDragOver={handleDragOver}
@@ -294,7 +451,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdb,.gro,.top,.itp,.mdp,.ndx,.xvg,.log,.zip,.in,.data,.lmp,.lammps,.lammpstrj"
+          accept=".pdb,.gro,.top,.itp,.mdp,.ndx,.xvg,.log,.zip,.in,.data,.lmp,.lammps,.lammpstrj,.pdbqt,.mol2,.sdf"
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />
@@ -306,19 +463,19 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
           <div>
             <h3 className="text-base font-semibold text-slate-100">
-              Drag & Drop GROMACS or LAMMPS Simulation Files
+              Drag & Drop Molecular Dynamics & Docking Files
             </h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-lg mx-auto">
-              Supports GROMACS (<span className="text-cyan-400 font-mono">.pdb</span>, <span className="text-cyan-400 font-mono">.gro</span>, <span className="text-cyan-400 font-mono">.top</span>, <span className="text-cyan-400 font-mono">.mdp</span>, <span className="text-cyan-400 font-mono">.xvg</span>) and LAMMPS (<span className="text-amber-400 font-mono">in.*</span>, <span className="text-amber-400 font-mono">data.*</span>, <span className="text-amber-400 font-mono">*.lmp</span>, <span className="text-amber-400 font-mono">log.lammps</span>) or <span className="text-cyan-400 font-mono">.zip</span> archives.
+            <p className="text-xs text-slate-400 mt-1 max-w-xl mx-auto">
+              Drop GROMACS (<span className="text-cyan-400 font-mono">.pdb</span>, <span className="text-cyan-400 font-mono">.gro</span>, <span className="text-cyan-400 font-mono">.top</span>, <span className="text-cyan-400 font-mono">.mdp</span>), LAMMPS (<span className="text-amber-400 font-mono">in.*</span>, <span className="text-amber-400 font-mono">data.*</span>), or <strong className="text-white">CB-Dock / AutoDock Vina</strong> complexes (<span className="text-emerald-400 font-mono">docked.pdb</span>, <span className="text-emerald-400 font-mono">.pdbqt</span>, <span className="text-emerald-400 font-mono">.zip</span>).
             </p>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
-            <span>Dual-engine parsing</span>
+            <span>CB-Dock cavity detection</span>
             <span>·</span>
-            <span>3D rendering</span>
+            <span>GAFF2 / CGenFF parameterization</span>
             <span>·</span>
-            <span>Instant conversion</span>
+            <span>Dual-thermostat MD</span>
           </div>
         </div>
       </div>
@@ -331,6 +488,23 @@ export const DropZone: React.FC<DropZoneProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* CB-Dock Presets */}
+          <button
+            onClick={() => loadPreset('cbdock_complex')}
+            className="px-2.5 py-1.5 text-xs font-mono text-emerald-200 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-700/60 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+          >
+            <span className="text-emerald-400 text-[10px] font-bold">CB-DOCK</span>
+            <span>1AKI + Inhibitor (-8.6 kcal)</span>
+          </button>
+
+          <button
+            onClick={() => loadPreset('cbdock_mpro')}
+            className="px-2.5 py-1.5 text-xs font-mono text-emerald-200 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-700/60 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+          >
+            <span className="text-emerald-400 text-[10px] font-bold">CB-DOCK</span>
+            <span>Mpro + Paxlovid (-9.4 kcal)</span>
+          </button>
+
           {/* Biomolecular (GROMACS) */}
           <button
             onClick={() => loadPreset('lysozyme')}
