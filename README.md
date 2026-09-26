@@ -1,8 +1,8 @@
 # GROMACS vs. LAMMPS Comparative Studio
 
 <p align="center">
-  <a href="https://ibb.co/350FF3vR">
-    <img src="https://i.ibb.co/350FF3vR/github-project-banner-1790357373350.jpg" alt="GROMACS vs LAMMPS Comparative Studio Banner" width="100%">
+  <a href="https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio">
+    <img src="https://i.ibb.co/JWzpp1q3/github-project-banner-1790357373350.jpg" alt="GROMACS vs LAMMPS Comparative Studio Banner" width="100%">
   </a>
 </p>
 
