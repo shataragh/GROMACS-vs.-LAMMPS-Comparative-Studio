@@ -1,8 +1,8 @@
 # GROMACS vs. LAMMPS Comparative Studio
 
 <p align="center">
-  <a href="https://github.com/shataragh/GROMACS-vs.-LAMMPS-Comparative-Studio">
-    <img src="assets/banner.jpg" alt="GROMACS vs LAMMPS Comparative Studio Banner" width="100%">
+  <a href="https://ibb.co/350FF3vR">
+    <img src="https://i.ibb.co/350FF3vR/github-project-banner-1790357373350.jpg" alt="GROMACS vs LAMMPS Comparative Studio Banner" width="100%">
   </a>
 </p>
 
@@ -85,8 +85,8 @@
 ## 🖼 Application Preview
 
 <p align="center">
-  <a href="assets/preview.png">
-    <img src="assets/preview.png" alt="Application Screenshot" width="85%">
+  <a href="https://ibb.co/C5kTMYVH">
+    <img src="https://i.ibb.co/hRPtZ42m/asas.png" alt="Application Screenshot" width="85%">
   </a>
 </p>
 
@@ -193,16 +193,17 @@ Contributions are welcome from the computational chemistry, materials science, a
 
 If this tool has accelerated your research, simplified your teaching, or streamlined your workflows, consider supporting the ongoing development!
 
-### Decentralized Crypto Transfer
+### Trust Wallet / Crypto Transfer
 
-You can send crypto directly via **TRC-20 (TRON Network)**:
+You can send TRX or TRC-20 tokens directly via **Trust Wallet**:
 
 ```text
 TPoSnHr516phFiSrFWi2CrZvmQ5GpZTTvM
 ```
 
+> **Wallet Platform:** Trust Wallet  
 > **Network:** TRON (TRC-20)  
-> **Supported Tokens:** USDT, TRX, USDC
+> **Supported Assets:** TRX, USDT (TRC-20), USDC (TRC-20)
 
 *Your contributions help maintain cloud deployment, fund feature development, and support open-source computational science.*
 
